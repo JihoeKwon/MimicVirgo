@@ -98,7 +98,15 @@ map_service.create_map(data, output_file="groundwater_map.html")
 - [CADWR Groundwater Data](https://data.cnra.ca.gov/)
 - [USGS National Water Information System](https://waterdata.usgs.gov/nwis)
 
+## 개발자
+
+**권지회 (Jihoe Kwon)**
+한국지질자원연구원 (KIGAM) AI융합연구실
+권백찬/권수연 아빠 👨‍👧‍👦
+
 ## 라이선스
+
+Copyright (c) 2025 한국지질자원연구원 (Korea Institute of Geoscience and Mineral Resources, KIGAM)
 
 This project is for research and development purposes.
 
