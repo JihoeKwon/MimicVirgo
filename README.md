@@ -2,6 +2,18 @@
 
 NASA JPL [Virgo](https://wwao.jpl.nasa.gov/media/virgo) 플랫폼을 벤치마킹하여 개발한 지하수 모니터링 가시화 서비스입니다.
 
+## 개발자
+
+**권지회 (Jihoe Kwon)**
+한국지질자원연구원 (KIGAM) AI융합연구실
+권백찬/권수연 아빠 👨‍👧‍👦
+
+## 라이선스
+
+Copyright (c) 2025 한국지질자원연구원 (Korea Institute of Geoscience and Mineral Resources, KIGAM)
+
+This project is for research and development purposes.
+
 ## 개요
 
 이 프로젝트는 California Department of Water Resources (CADWR) API로부터 지하수 데이터를 수집하여 인터랙티브 지도 상에 가시화합니다. Virgo 플랫폼의 핵심 기능을 분석하고 재현하여, 향후 **대한민국 지하수 정보 플랫폼 AEGIS** 구현의 기반 기술로 활용될 예정입니다.
@@ -136,18 +148,6 @@ map_service.create_map(data, output_file="groundwater_map.html")
 - [NASA JPL Virgo Platform](https://wwao.jpl.nasa.gov/media/virgo)
 - [CADWR Groundwater Data](https://data.cnra.ca.gov/)
 - [USGS National Water Information System](https://waterdata.usgs.gov/nwis)
-
-## 개발자
-
-**권지회 (Jihoe Kwon)**
-한국지질자원연구원 (KIGAM) AI융합연구실
-권백찬/권수연 아빠 👨‍👧‍👦
-
-## 라이선스
-
-Copyright (c) 2025 한국지질자원연구원 (Korea Institute of Geoscience and Mineral Resources, KIGAM)
-
-This project is for research and development purposes.
 
 ---
 
