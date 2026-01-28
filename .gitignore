@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+
+# Temporary files
+*.tmp.*
+*.bak
+nul
+
+# Screenshots and test files
+screenshot*.png
+test_*.png
+test_*.html
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large HTML files (generated)
+# groundwater_map.html
+# gw_*.html
+# sandiego_2023_2025.html
+# USGS_groundwater_map.html

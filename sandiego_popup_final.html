@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Groundwater Map - San Diego</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-3.0.0.min.js"></script>
+    <style>/* CADWR Groundwater Map Styles */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+* {
+    font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.js-plotly-plot, .plotly-graph-div {
+    height: 100vh !important;
+    width: 100vw !important;
+}
+
+.maplibregl-ctrl-attrib,
+.mapboxgl-ctrl-attrib {
+    display: none !important;
+}
+
+/* Map Controls */
+.map-controls {
+    position: fixed;
+    left: 20px;
+    bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 1000;
+}
+
+.map-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #555;
+    transition: all 0.2s ease;
+}
+
+.map-btn:hover {
+    background: #f0f0f0;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.map-btn:active {
+    transform: scale(0.95);
+}
+
+.map-btn.zoom-in { color: #2196F3; }
+.map-btn.zoom-out { color: #2196F3; }
+.map-btn.home { color: #4CAF50; }
+.map-btn.info { color: #FF9800; }
+
+/* Info Modal */
+.info-modal {
+    display: none;
+    position: fixed;
+    left: 70px;
+    bottom: 30px;
+    background: white;
+    padding: 15px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    z-index: 1001;
+    max-width: 280px;
+}
+
+.info-modal h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 14px;
+}
+
+.info-modal p {
+    margin: 5px 0;
+    color: #666;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.info-modal .close-btn {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #999;
+}
+
+/* Marker Popup */
+.marker-popup {
+    display: none;
+    position: fixed;
+    background: white;
+    padding: 0;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    z-index: 2000;
+    min-width: 500px;
+    min-height: 400px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+/* Resize handles */
+.marker-popup .resize-handle {
+    position: absolute;
+    background: transparent;
+    z-index: 10;
+}
+.marker-popup .resize-handle.right {
+    top: 0; right: -5px; width: 10px; height: 100%;
+    cursor: ew-resize;
+}
+.marker-popup .resize-handle.bottom {
+    bottom: -5px; left: 0; width: 100%; height: 10px;
+    cursor: ns-resize;
+}
+.marker-popup .resize-handle.corner {
+    bottom: -5px; right: -5px; width: 15px; height: 15px;
+    cursor: nwse-resize;
+}
+
+.marker-popup .popup-header {
+    background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
+    color: white;
+    padding: 15px 20px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.marker-popup .popup-body {
+    padding: 15px 15px 15px 15px;
+    overflow-y: auto;
+    overflow-x: visible;
+    max-height: calc(90vh - 60px);
+}
+
+.marker-popup .popup-body .info-row {
+    display: flex;
+    margin-bottom: 10px;
+    align-items: flex-start;
+}
+
+.marker-popup .popup-body .info-row:last-child {
+    margin-bottom: 0;
+}
+
+.marker-popup .popup-body .info-label {
+    font-weight: 600;
+    color: #555;
+    min-width: 120px;
+    font-size: 13px;
+}
+
+.marker-popup .popup-body .info-value {
+    color: #333;
+    font-size: 13px;
+    flex: 1;
+}
+
+.marker-popup .close-popup {
+    position: absolute;
+    top: 12px;
+    right: 15px;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.marker-popup .close-popup:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* Popup Overlay */
+.popup-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
+    z-index: 1999;
+}
+
+/* Chart Container */
+.chart-container {
+    margin-top: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: visible;
+    background: #fafafa;
+}
+
+.chart-title {
+    background: #f5f5f5;
+    padding: 10px 15px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.chart-area {
+    padding: 5px;
+    overflow: hidden;
+}
+
+#pctChartArea,
+#chartArea {
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Plotly chart container - prevent extra space */
+#pctChartArea .js-plotly-plot,
+#chartArea .js-plotly-plot {
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+#pctChartArea .plot-container,
+#chartArea .plot-container {
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+#pctChartArea .svg-container,
+#chartArea .svg-container {
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+#pctChartArea .main-svg,
+#chartArea .main-svg {
+    height: auto !important;
+}
+
+#pctChartArea,
+#chartArea {
+    min-height: 0 !important;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-card .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1976D2;
+}
+
+.stat-card .stat-label {
+    font-size: 11px;
+    color: #666;
+    margin-top: 4px;
+}
+
+/* Layer Panel */
+.layer-panel {
+    position: fixed;
+    right: 20px;
+    top: 80px;
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    z-index: 1000;
+    min-width: 200px;
+}
+
+.layer-panel h4 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 8px;
+}
+
+.layer-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.layer-item:last-child {
+    border-bottom: none;
+}
+
+.layer-checkbox {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    cursor: pointer;
+    accent-color: #1976D2;
+}
+
+.layer-label {
+    flex: 1;
+    font-size: 12px;
+    color: #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.layer-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    border: 1px solid rgba(0,0,0,0.2);
+}
+
+.layer-count {
+    font-size: 10px;
+    color: #888;
+    margin-left: 8px;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+/* Scale Bar */
+.scale-bar {
+    position: fixed;
+    left: 75px;
+    bottom: 30px;
+    background: rgba(255,255,255,0.9);
+    padding: 6px 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    font-size: 10px;
+    z-index: 1000;
+}
+
+.scale-bar-line {
+    height: 4px;
+    background: linear-gradient(90deg, #333 0%, #333 50%, #888 50%, #888 100%);
+    border-radius: 2px;
+    margin-bottom: 4px;
+}
+
+.scale-bar-label {
+    text-align: center;
+    color: #333;
+    font-weight: 500;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.8);
+    z-index: 3000;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #1976D2;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body>
+<div>                        <script type="text/javascript">window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.3.1.min.js" integrity="sha256-4rD3fugVb/nVJYUv5Ky3v+fYXoouHaBSP20WIJuEiWg=" crossorigin="anonymous"></script>                <div id="db8cb6eb-31a6-4469-af0f-6bae3af45675" class="plotly-graph-div" style="height:100%; width:100%;"></div>            <script type="text/javascript">                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("db8cb6eb-31a6-4469-af0f-6bae3af45675")) {                    Plotly.newPlot(                        "db8cb6eb-31a6-4469-af0f-6bae3af45675",                        [{"customdata":[{"site_no":"325536N1170608W001","name":"Boundary Waters","lat":32.5536,"lon":-117.061,"source":"CADWR","county":"San Diego","basin_name":"COASTAL PLAIN OF SAN DIEGO","measurement_date":"2025-09-24","depth_ft":15.44,"gwe_ft":29.82,"gse_ft":45.26,"well_use":"Observation","change":3.200000000000001,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"325910N1170835W006","name":"Otay Trolley","lat":32.591,"lon":-117.084,"source":"CADWR","county":"San Diego","basin_name":"COASTAL PLAIN OF SAN DIEGO","measurement_date":"2025-09-24","depth_ft":16.48,"gwe_ft":7.15,"gse_ft":23.63,"well_use":"Observation","change":4.770000000000001,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"326821N1171124W006","name":"Naval Base","lat":32.6821,"lon":-117.112,"source":"CADWR","county":"San Diego","basin_name":"COASTAL PLAIN OF SAN DIEGO","measurement_date":"2025-09-24","depth_ft":9.18,"gwe_ft":3.07,"gse_ft":12.25,"well_use":"Observation","change":-1.1900000000000013,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"327781N1171209W006","name":"Aqua Culture","lat":32.7781,"lon":-117.121,"source":"CADWR","county":"San Diego","basin_name":"MISSION VALLEY","measurement_date":"2025-09-24","depth_ft":18.32,"gwe_ft":41.55,"gse_ft":59.87,"well_use":"Observation","change":1.110000000000003,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"327893N1169478W001","name":"ECV-1","lat":32.7892,"lon":-116.949,"source":"CADWR","county":"San Diego","basin_name":"EL CAJON VALLEY","measurement_date":"2025-09-24","depth_ft":11.6,"gwe_ft":438.4,"gse_ft":450,"well_use":"Observation","change":4.539999999999999,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"328442N1169971W001","name":"MW-2","lat":32.8442,"lon":-116.997,"source":"CADWR","county":"San Diego","basin_name":"SAN DIEGO RIVER VALLEY","measurement_date":"2025-08-02","depth_ft":12.48,"gwe_ft":314.52,"gse_ft":327,"well_use":"Observation","change":-19.1,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"328556N1169394W001","name":"Marilla Well","lat":32.8556,"lon":-116.939,"source":"CADWR","county":"San Diego","basin_name":"SAN DIEGO RIVER VALLEY","measurement_date":"2025-09-24","depth_ft":19.04,"gwe_ft":357.39,"gse_ft":376.43,"well_use":"Observation","change":1.25,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"328662N1169215W001","name":"Vine Street","lat":32.8662,"lon":-116.921,"source":"CADWR","county":"San Diego","basin_name":"SAN DIEGO RIVER VALLEY","measurement_date":"2025-08-30","depth_ft":26,"gwe_ft":374,"gse_ft":400,"well_use":"Observation","change":-8.0,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"329593N1169256W001","name":"Confluence","lat":32.8675,"lon":-116.926,"source":"CADWR","county":"San Diego","basin_name":"","measurement_date":"2025-09-24","depth_ft":12.66,"gwe_ft":377.34,"gse_ft":390,"well_use":"Observation","change":-3.0,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"328715N1169003W001","name":"Well 101","lat":32.8715,"lon":-116.9,"source":"CADWR","county":"San Diego","basin_name":"SAN DIEGO RIVER VALLEY","measurement_date":"2025-08-03","depth_ft":15.57,"gwe_ft":410.83,"gse_ft":426.4,"well_use":"Other","change":-11.36,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"329054N1169302W001","name":"AMW-2","lat":32.9054,"lon":-116.93,"source":"CADWR","county":"San Diego","basin_name":"SAN DIEGO RIVER VALLEY","measurement_date":"2025-09-24","depth_ft":19.95,"gwe_ft":430.05,"gse_ft":450,"well_use":"Observation","change":-1.870000000000001,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330494N1170425W001","name":"SP014","lat":33.0494,"lon":-117.043,"source":"CADWR","county":"San Diego","basin_name":"","measurement_date":"2025-03-17","depth_ft":10.94,"gwe_ft":319.06,"gse_ft":330,"well_use":"Industrial","change":-5.41,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330495N1170425W002","name":"BG 07232025","lat":33.0495,"lon":-117.043,"source":"CADWR","county":"San Diego","basin_name":"","measurement_date":"2025-07-24","depth_ft":50.5,"gwe_ft":100,"gse_ft":150.5,"well_use":"Observation","change":0,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330557N1170464W001","name":"SDLH","lat":33.0557,"lon":-117.046,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-09-24","depth_ft":14.95,"gwe_ft":306.85,"gse_ft":321.8,"well_use":"Residential","change":3.83,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330596N1170367W002","name":"SP100","lat":33.0596,"lon":-117.037,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-03-17","depth_ft":8.33,"gwe_ft":318.97,"gse_ft":327.3,"well_use":"Observation","change":5.720000000000001,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330699N1170319W002","name":"SP106","lat":33.0699,"lon":-117.032,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-03-17","depth_ft":25.97,"gwe_ft":309.93,"gse_ft":335.9,"well_use":"Observation","change":20.05,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330786N1169983W002","name":"SP110","lat":33.0786,"lon":-116.998,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-03-17","depth_ft":20.32,"gwe_ft":354.98,"gse_ft":375.3,"well_use":"Observation","change":-36.79,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330848N1170146W001","name":"SP107","lat":33.0848,"lon":-117.015,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-09-24","depth_ft":17.83,"gwe_ft":339.97,"gse_ft":357.8,"well_use":"Observation","change":3.629999999999999,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330870N1169636W002","name":"SP058","lat":33.087,"lon":-116.964,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-03-17","depth_ft":29.74,"gwe_ft":385.76,"gse_ft":415.5,"well_use":"Observation","change":0,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330874N1169748W001","name":"SDSY","lat":33.0874,"lon":-116.975,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-09-24","depth_ft":34.8,"gwe_ft":366.6,"gse_ft":401.4,"well_use":"Observation","change":-40.96999999999999,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330878N1169312W002","name":"SP093","lat":33.0879,"lon":-116.931,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-03-17","depth_ft":50.26,"gwe_ft":417.94,"gse_ft":468.2,"well_use":"Observation","change":-2.210000000000001,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330891N1169551W002","name":"SP086","lat":33.0892,"lon":-116.955,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-03-17","depth_ft":26.62,"gwe_ft":404.78,"gse_ft":431.4,"well_use":"Observation","change":-17.97,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330921N1169508W002","name":"SP089","lat":33.0922,"lon":-116.951,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-03-17","depth_ft":37.78,"gwe_ft":400.92,"gse_ft":438.7,"well_use":"Irrigation","change":-60.85,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330924N1169465W001","name":"SP073","lat":33.0924,"lon":-116.947,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-02-09","depth_ft":41.71,"gwe_ft":404.29,"gse_ft":446,"well_use":"Observation","change":-62.16,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330949N1169598W002","name":"Rockwood MW-2","lat":33.0949,"lon":-116.96,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-03-31","depth_ft":29.14,"gwe_ft":395.46,"gse_ft":424.6,"well_use":"Observation","change":-55.669999999999995,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"330979N1170172W001","name":"SDCD","lat":33.0987,"lon":-117.017,"source":"CADWR","county":"San Diego","basin_name":"SAN PASQUAL VALLEY","measurement_date":"2025-09-24","depth_ft":4.4,"gwe_ft":357.7,"gse_ft":362.1,"well_use":"Observation","change":-5.290000000000001,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"332114N1173775W001","name":"1A","lat":33.2114,"lon":-117.377,"source":"CADWR","county":"San Diego","basin_name":"","measurement_date":"2025-03-07","depth_ft":13.35,"gwe_ft":-1.35,"gse_ft":12,"well_use":"Observation","change":1.6800000000000015,"pct_lowest":13.65,"pct_10":13.25,"pct_25":12.28,"pct_50":10.65,"pct_75":10.31,"pct_90":10.12,"pct_highest":9.26,"percentile_class":"0-10","percentile_class_code":3,"measurement_count":21},{"site_no":"332367N1167165W001","name":"90","lat":33.2367,"lon":-116.717,"source":"CADWR","county":"San Diego","basin_name":"WARNER VALLEY","measurement_date":"2025-10-15","depth_ft":31.55,"gwe_ft":2704.45,"gse_ft":2736,"well_use":"Observation","change":-7.939999999999998,"pct_lowest":39.52,"pct_10":37.07,"pct_25":35.69,"pct_50":33.46,"pct_75":29.87,"pct_90":28.75,"pct_highest":24.75,"percentile_class":"50-75","percentile_class_code":3,"measurement_count":396},{"site_no":"332391N1173818W001","name":"11D4","lat":33.2391,"lon":-117.382,"source":"CADWR","county":"San Diego","basin_name":"SANTA MARGARITA VALLEY","measurement_date":"2025-03-04","depth_ft":10.31,"gwe_ft":10.29,"gse_ft":20.6,"well_use":"Observation","change":0.8399999999999999,"pct_lowest":null,"pct_10":null,"pct_25":null,"pct_50":null,"pct_75":null,"pct_90":null,"pct_highest":null,"percentile_class":"","percentile_class_code":null,"measurement_count":null},{"site_no":"332486N1166558W001","name":"82","lat":33.2486,"lon":-116.656,"source":"CADWR","county":"San Diego","basin_name":"WARNER VALLEY","measurement_date":"2025-10-15","depth_ft":9.85,"gwe_ft":2977.15,"gse_ft":2987,"well_use":"Observation","change":-14.35,"pct_lowest":30.76,"pct_10":20.52,"pct_25":17.2,"pct_50":14.15,"pct_75":7.28,"pct_90":3.85,"pct_highest":-0.38,"percentile_class":"50-75","percentile_class_code":4,"measurement_count":1135}],"hoverinfo":"text","hovertemplate":"\u003cb\u003e%{text}\u003c\u002fb\u003e\u003cbr\u003eLat: %{lat:.4f}\u003cbr\u003eLon: %{lon:.4f}\u003cbr\u003eClick for details\u003cextra\u003e\u003c\u002fextra\u003e","lat":[32.5536,32.591,32.6821,32.7781,32.7892,32.8442,32.8556,32.8662,32.8675,32.8715,32.9054,33.0494,33.0495,33.0557,33.0596,33.0699,33.0786,33.0848,33.087,33.0874,33.0879,33.0892,33.0922,33.0924,33.0949,33.0987,33.2114,33.2367,33.2391,33.2486],"lon":[-117.061,-117.084,-117.112,-117.121,-116.949,-116.997,-116.939,-116.921,-116.926,-116.9,-116.93,-117.043,-117.043,-117.046,-117.037,-117.032,-116.998,-117.015,-116.964,-116.975,-116.931,-116.955,-116.951,-116.947,-116.96,-117.017,-117.377,-116.717,-117.382,-116.656],"marker":{"cmax":20.05,"cmin":-62.16,"color":[3.200000000000001,4.770000000000001,-1.1900000000000013,1.110000000000003,4.539999999999999,-19.1,1.25,-8.0,-3.0,-11.36,-1.870000000000001,-5.41,0,3.83,5.720000000000001,20.05,-36.79,3.629999999999999,0,-40.96999999999999,-2.210000000000001,-17.97,-60.85,-62.16,-55.669999999999995,-5.290000000000001,1.6800000000000015,-7.939999999999998,0.8399999999999999,-14.35],"colorbar":{"bgcolor":"rgba(255,255,255,0.9)","bordercolor":"#ddd","borderwidth":1,"len":0.15,"orientation":"h","thickness":10,"tickfont":{"family":"Inter","size":9},"tickformat":".1f","title":{"font":{"family":"Inter","size":10},"side":"top","text":"Change (ft)"},"x":0.85,"xanchor":"center","y":0.02,"yanchor":"bottom"},"colorscale":[[0.0,"rgb(49,54,149)"],[0.1,"rgb(69,117,180)"],[0.2,"rgb(116,173,209)"],[0.3,"rgb(171,217,233)"],[0.4,"rgb(224,243,248)"],[0.5,"rgb(255,255,191)"],[0.6,"rgb(254,224,144)"],[0.7,"rgb(253,174,97)"],[0.8,"rgb(244,109,67)"],[0.9,"rgb(215,48,39)"],[1.0,"rgb(165,0,38)"]],"opacity":0.85,"showscale":true,"size":12},"mode":"markers","name":"CADWR","text":["Boundary Waters","Otay Trolley","Naval Base","Aqua Culture","ECV-1","MW-2","Marilla Well","Vine Street","Confluence","Well 101","AMW-2","SP014","BG 07232025","SDLH","SP100","SP106","SP110","SP107","SP058","SDSY","SP093","SP086","SP089","SP073","Rockwood MW-2","SDCD","1A","90","11D4","82"],"type":"scattermap"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"title":{"font":{"size":18,"color":"#333","family":"Inter, sans-serif"},"text":"CADWR Groundwater - San Diego","x":0.5,"xanchor":"center"},"map":{"center":{"lat":32.99058,"lon":-116.99953333333333},"style":{"version":8,"name":"Carto Positron with Shaded Relief","sources":{"carto":{"type":"raster","tiles":["https:\u002f\u002fa.basemaps.cartocdn.com\u002flight_all\u002f{z}\u002f{x}\u002f{y}.png"],"tileSize":256,"maxzoom":19,"attribution":"OpenStreetMap, CARTO"},"shaded-relief":{"type":"raster","tiles":["https:\u002f\u002fgibs.earthdata.nasa.gov\u002fwmts\u002fepsg3857\u002fbest\u002fASTER_GDEM_Greyscale_Shaded_Relief\u002fdefault\u002fGoogleMapsCompatible_Level12\u002f{z}\u002f{y}\u002f{x}.png"],"tileSize":256,"maxzoom":12,"attribution":"NASA ASTER GDEM"}},"layers":[{"id":"carto-layer","type":"raster","source":"carto","paint":{"raster-opacity":1.0}},{"id":"shaded-relief-layer","type":"raster","source":"shaded-relief","paint":{"raster-opacity":0.3}}]},"zoom":9},"margin":{"l":0,"r":0,"t":50,"b":0},"paper_bgcolor":"white","showlegend":false},                        {"responsive": true}                    )                };            </script>        </div>
+
+<div class="map-controls">
+    <button class="map-btn zoom-in" onclick="return zoomIn(event)" title="Zoom In">
+        <i class="fas fa-plus"></i>
+    </button>
+    <button class="map-btn zoom-out" onclick="return zoomOut(event)" title="Zoom Out">
+        <i class="fas fa-minus"></i>
+    </button>
+    <button class="map-btn home" onclick="return goHome(event)" title="Home">
+        <i class="fas fa-home"></i>
+    </button>
+    <button class="map-btn info" onclick="toggleInfo()" title="Info">
+        <i class="fas fa-info"></i>
+    </button>
+</div>
+
+<div class="info-modal" id="infoModal">
+    <button class="close-btn" onclick="toggleInfo()">&times;</button>
+    <h4>Groundwater Monitoring Map</h4>
+    <p><strong>Region:</strong> San Diego</p>
+    <p><strong>Period:</strong> 2023-01-01 ~ 2025-01-01</p>
+    <p style="margin-top:10px;"><strong>Data Source:</strong></p>
+    <p style="font-size:11px;"><span style="color:#4CAF50;">●</span> CA DWR - California state data</p>
+    <p style="margin-top:10px; color:#999; font-size:11px;">Click markers for details.</p>
+</div>
+
+<div class="popup-overlay" id="popupOverlay" onclick="closeMarkerPopup()"></div>
+<div class="marker-popup" id="markerPopup">
+    <button class="close-popup" onclick="closeMarkerPopup()">&times;</button>
+    <div class="popup-header" id="popupHeader">Site Information</div>
+    <div class="popup-body" id="popupBody"></div>
+</div>
+
+<div class="scale-bar" id="scaleBar">
+    <div class="scale-bar-line" id="scaleBarLine" style="width: 100px;"></div>
+    <div class="scale-bar-label" id="scaleBarLabel">1 km</div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+</div>
+
+
+
+<script>/**
+ * CADWR Groundwater Map - Interactive Controls
+ */
+
+// Global state
+var MapState = {
+    homeCenter: { lat: 33.0, lon: -117.0 },
+    homeZoom: 9,
+    currentZoom: 9,
+    plotDiv: null,
+    siteTimeSeries: {},
+    layerConfig: [],
+    layerOriginalData: {}
+};
+
+// Initialize map state from config
+function initMapState(config) {
+    MapState.homeCenter = { lat: config.homeLat, lon: config.homeLon };
+    MapState.homeZoom = config.homeZoom;
+    MapState.currentZoom = config.homeZoom;
+    MapState.siteTimeSeries = config.timeSeries || {};
+    MapState.layerConfig = config.layers || [];
+}
+
+// Get Plotly div (cached)
+function getPlotDiv() {
+    if (!MapState.plotDiv) {
+        MapState.plotDiv = document.getElementsByClassName('js-plotly-plot')[0];
+    }
+    return MapState.plotDiv;
+}
+
+// Zoom In
+function zoomIn(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    try {
+        var gd = getPlotDiv();
+        if (!gd || !gd.layout || !gd.layout.map) {
+            console.warn('Map not ready for zoomIn');
+            return false;
+        }
+        var mapLayout = gd.layout.map;
+        var currentLat = mapLayout.center ? mapLayout.center.lat : MapState.homeCenter.lat;
+        var currentLon = mapLayout.center ? mapLayout.center.lon : MapState.homeCenter.lon;
+        var targetZoom = Math.min((mapLayout.zoom || MapState.currentZoom) + 1, 20);
+        Plotly.relayout(gd, {
+            'map.zoom': targetZoom,
+            'map.center.lat': currentLat,
+            'map.center.lon': currentLon
+        });
+        MapState.currentZoom = targetZoom;
+    } catch (err) { console.error('zoomIn error:', err); }
+    return false;
+}
+
+// Zoom Out
+function zoomOut(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    try {
+        var gd = getPlotDiv();
+        if (!gd || !gd.layout || !gd.layout.map) {
+            console.warn('Map not ready for zoomOut');
+            return false;
+        }
+        var mapLayout = gd.layout.map;
+        var currentLat = mapLayout.center ? mapLayout.center.lat : MapState.homeCenter.lat;
+        var currentLon = mapLayout.center ? mapLayout.center.lon : MapState.homeCenter.lon;
+        var targetZoom = Math.max((mapLayout.zoom || MapState.currentZoom) - 1, 1);
+        Plotly.relayout(gd, {
+            'map.zoom': targetZoom,
+            'map.center.lat': currentLat,
+            'map.center.lon': currentLon
+        });
+        MapState.currentZoom = targetZoom;
+    } catch (err) { console.error('zoomOut error:', err); }
+    return false;
+}
+
+// Go Home
+function goHome(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    try {
+        var gd = getPlotDiv();
+        if (!gd) {
+            console.warn('Map not ready for goHome');
+            return false;
+        }
+        Plotly.relayout(gd, {
+            'map.zoom': MapState.homeZoom,
+            'map.center.lat': MapState.homeCenter.lat,
+            'map.center.lon': MapState.homeCenter.lon
+        });
+        MapState.currentZoom = MapState.homeZoom;
+    } catch (err) { console.error('goHome error:', err); }
+    return false;
+}
+
+// Toggle Info Modal
+function toggleInfo() {
+    var modal = document.getElementById('infoModal');
+    modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+}
+
+// Toggle Layer Visibility
+function toggleLayer(layerId) {
+    var gd = getPlotDiv();
+    if (!gd || !gd.data) return;
+
+    var checkbox = document.getElementById('layer-' + layerId);
+    var visible = checkbox.checked;
+
+    for (var i = 0; i < gd.data.length; i++) {
+        if (gd.data[i].name === layerId) {
+            if (!visible) {
+                MapState.layerOriginalData[layerId] = {
+                    lat: gd.data[i].lat.slice(),
+                    lon: gd.data[i].lon.slice()
+                };
+                Plotly.restyle(gd, { lat: [[]], lon: [[]] }, [i]);
+            } else {
+                if (MapState.layerOriginalData[layerId]) {
+                    Plotly.restyle(gd, {
+                        lat: [MapState.layerOriginalData[layerId].lat],
+                        lon: [MapState.layerOriginalData[layerId].lon]
+                    }, [i]);
+                }
+            }
+            break;
+        }
+    }
+}
+
+// Get Percentile Color
+function getPercentileColor(classCode) {
+    if (classCode === 1 || classCode === 2) return '#1565C0';  // Blue (good)
+    if (classCode === 3 || classCode === 4) return '#43A047';  // Green (normal)
+    if (classCode === 5) return '#FF9800';  // Orange (caution)
+    if (classCode === 6 || classCode === 7) return '#D32F2F';  // Red (drought)
+    return '#757575';  // Gray (not ranked)
+}
+
+// Show Marker Popup
+function showMarkerPopup(siteNo, data) {
+    var header = document.getElementById('popupHeader');
+    var body = document.getElementById('popupBody');
+    var popup = document.getElementById('markerPopup');
+    var overlay = document.getElementById('popupOverlay');
+
+    var source = data.source || 'USGS';
+    var sourceColor = source === 'CADWR' ? '#4CAF50' : '#1976D2';
+
+    header.innerHTML = '<span style="background:' + sourceColor + ';padding:2px 8px;border-radius:4px;font-size:11px;margin-right:10px;">' + source + '</span>' + (data.name || 'Site ' + siteNo);
+
+    var html = '';
+
+    // Basic info
+    html += '<div class="info-row"><span class="info-label">Site Code</span><span class="info-value">' + siteNo + '</span></div>';
+    html += '<div class="info-row"><span class="info-label">Latitude</span><span class="info-value">' + (data.lat ? data.lat.toFixed(6) : 'N/A') + '°</span></div>';
+    html += '<div class="info-row"><span class="info-label">Longitude</span><span class="info-value">' + (data.lon ? data.lon.toFixed(6) : 'N/A') + '°</span></div>';
+
+    // Source-specific info
+    if (source === 'CADWR') {
+        if (data.county) html += '<div class="info-row"><span class="info-label">County</span><span class="info-value">' + data.county + '</span></div>';
+        if (data.basin_name) html += '<div class="info-row"><span class="info-label">Basin</span><span class="info-value">' + data.basin_name + '</span></div>';
+        if (data.measurement_date) html += '<div class="info-row"><span class="info-label">Last Measured</span><span class="info-value">' + data.measurement_date + '</span></div>';
+        if (data.depth_ft !== null && data.depth_ft !== undefined) html += '<div class="info-row"><span class="info-label">Depth to Water</span><span class="info-value">' + data.depth_ft.toFixed(1) + ' ft</span></div>';
+        if (data.gwe_ft !== null && data.gwe_ft !== undefined) html += '<div class="info-row"><span class="info-label">GW Elevation</span><span class="info-value">' + data.gwe_ft.toFixed(1) + ' ft</span></div>';
+        if (data.percentile_class) html += '<div class="info-row"><span class="info-label">Percentile Class</span><span class="info-value" style="font-weight:600;color:' + getPercentileColor(data.percentile_class_code) + ';">' + data.percentile_class + '</span></div>';
+    } else {
+        if (data.aquifer_type) html += '<div class="info-row"><span class="info-label">Aquifer Type</span><span class="info-value">' + (data.aquifer_type === 'U' ? 'Unconfined' : 'Confined') + '</span></div>';
+    }
+
+    // Percentile Histogram (CADWR only) - rendered with Plotly
+    var hasPctData = data.pct_lowest !== null && data.pct_lowest !== undefined && data.pct_highest !== null;
+    if (source === 'CADWR' && hasPctData) {
+        html += '<div class="chart-container" style="margin-top:10px;">';
+        html += '<div class="chart-title"><i class="fas fa-chart-bar" style="margin-right:8px;color:#FF9800;"></i>Historical Percentile Distribution</div>';
+        html += '<div class="chart-area" id="pctChartArea"></div>';
+        html += '</div>';
+    }
+
+    // Time series data
+    var tsData = MapState.siteTimeSeries[siteNo];
+
+    if (tsData && tsData.dates && tsData.dates.length > 0) {
+        var values = tsData.values;
+        var minVal = Math.min.apply(null, values);
+        var maxVal = Math.max.apply(null, values);
+        var avgVal = values.reduce(function(a, b) { return a + b; }, 0) / values.length;
+        var change = values[values.length - 1] - values[0];
+
+        // Stats cards
+        html += '<div class="stats-grid">';
+        html += '<div class="stat-card"><div class="stat-value">' + minVal.toFixed(1) + '</div><div class="stat-label">Min (ft)</div></div>';
+        html += '<div class="stat-card"><div class="stat-value">' + maxVal.toFixed(1) + '</div><div class="stat-label">Max (ft)</div></div>';
+        html += '<div class="stat-card"><div class="stat-value">' + avgVal.toFixed(1) + '</div><div class="stat-label">Avg (ft)</div></div>';
+        html += '<div class="stat-card"><div class="stat-value" style="color:' + (change > 0 ? '#e53935' : '#43a047') + ';">' + (change > 0 ? '+' : '') + change.toFixed(1) + '</div><div class="stat-label">Change (ft)</div></div>';
+        html += '</div>';
+
+        // Chart - rendered with Plotly
+        var chartTitle = source === 'CADWR' ? 'Groundwater Level History' : 'Water Level Depth - 10-day intervals';
+        html += '<div class="chart-container">';
+        html += '<div class="chart-title"><i class="fas fa-chart-line" style="margin-right:8px;color:' + sourceColor + ';"></i>' + chartTitle + '</div>';
+        html += '<div class="chart-area" id="chartArea"></div>';
+        html += '</div>';
+    } else if (!hasPctData) {
+        html += '<div style="margin-top:15px;padding:20px;background:#fff3cd;border-radius:8px;text-align:center;color:#856404;">';
+        html += '<i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>No time series data available';
+        html += '</div>';
+    }
+
+    body.innerHTML = html;
+    overlay.style.display = 'block';
+    popup.style.display = 'block';
+
+    // Initialize popup position and size
+    initPopupResize(popup);
+
+    // Draw percentile chart with Plotly
+    if (source === 'CADWR' && hasPctData) {
+        setTimeout(function() { drawPercentileChart(data); }, 100);
+    }
+
+    // Draw time series chart with Plotly
+    if (tsData && tsData.dates && tsData.dates.length > 0) {
+        setTimeout(function() { drawTimeSeriesChart(tsData.dates, tsData.values, siteNo, sourceColor); }, 150);
+    }
+}
+
+// Initialize popup resize functionality
+function initPopupResize(popup) {
+    // Set initial size and center position
+    if (!popup.style.width) {
+        popup.style.width = '750px';
+    }
+    if (!popup.style.height) {
+        popup.style.height = 'auto';
+    }
+
+    // Center the popup
+    var rect = popup.getBoundingClientRect();
+    popup.style.left = (window.innerWidth - rect.width) / 2 + 'px';
+    popup.style.top = Math.max(20, (window.innerHeight - rect.height) / 2) + 'px';
+
+    // Add resize handles if not already present
+    if (!popup.querySelector('.resize-handle')) {
+        var handles = ['right', 'bottom', 'corner'];
+        handles.forEach(function(pos) {
+            var handle = document.createElement('div');
+            handle.className = 'resize-handle ' + pos;
+            handle.setAttribute('data-resize', pos);
+            popup.appendChild(handle);
+        });
+
+        // Initialize resize events
+        setupResizeEvents(popup);
+    }
+}
+
+// Setup resize events
+function setupResizeEvents(popup) {
+    var isResizing = false;
+    var currentHandle = null;
+    var startX, startY, startWidth, startHeight;
+
+    popup.addEventListener('mousedown', function(e) {
+        if (e.target.classList.contains('resize-handle')) {
+            isResizing = true;
+            currentHandle = e.target.getAttribute('data-resize');
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = popup.offsetWidth;
+            startHeight = popup.offsetHeight;
+            e.preventDefault();
+        }
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+
+        var dx = e.clientX - startX;
+        var dy = e.clientY - startY;
+
+        if (currentHandle === 'right' || currentHandle === 'corner') {
+            var newWidth = Math.max(400, startWidth + dx);
+            popup.style.width = newWidth + 'px';
+        }
+        if (currentHandle === 'bottom' || currentHandle === 'corner') {
+            var newHeight = Math.max(300, startHeight + dy);
+            popup.style.height = newHeight + 'px';
+        }
+
+        // Relayout Plotly charts to fit new size
+        var pctChart = document.getElementById('pctChartArea');
+        var tsChart = document.getElementById('chartArea');
+        if (pctChart && pctChart._fullLayout) {
+            Plotly.relayout(pctChart, { autosize: true });
+        }
+        if (tsChart && tsChart._fullLayout) {
+            Plotly.relayout(tsChart, { autosize: true });
+        }
+    });
+
+    document.addEventListener('mouseup', function() {
+        if (isResizing) {
+            isResizing = false;
+            currentHandle = null;
+            // Final relayout
+            var pctChart = document.getElementById('pctChartArea');
+            var tsChart = document.getElementById('chartArea');
+            if (pctChart && pctChart._fullLayout) {
+                Plotly.Plots.resize(pctChart);
+            }
+            if (tsChart && tsChart._fullLayout) {
+                Plotly.Plots.resize(tsChart);
+            }
+        }
+    });
+}
+
+// Draw Percentile Chart
+function drawPercentileChart(data) {
+    var chartDiv = document.getElementById('pctChartArea');
+    if (!chartDiv) return;
+
+    var currentDepth = data.depth_ft;
+
+    // Values sorted from shallowest (best) to deepest (worst) - reversed for Plotly horizontal bar
+    var pctValues = [
+        data.pct_highest,
+        data.pct_90,
+        data.pct_75,
+        data.pct_50,
+        data.pct_25,
+        data.pct_10,
+        data.pct_lowest
+    ];
+    var pctLabels = ['Highest', 'P90', 'P75', 'P50', 'P25', 'P10', 'Lowest'];
+    var colors = ['#1565C0', '#1976D2', '#43A047', '#66BB6A', '#FFA726', '#F57C00', '#D32F2F'];
+
+    var trace = {
+        x: pctValues,
+        y: pctLabels,
+        type: 'bar',
+        orientation: 'h',
+        marker: { color: colors },
+        text: pctValues.map(function(v) { return v !== null && v !== undefined ? v.toFixed(1) + ' ft' : ''; }),
+        textposition: 'inside',
+        textfont: { size: 9, color: 'white' },
+        insidetextanchor: 'end',
+        hovertemplate: '%{y}: %{x:.1f} ft depth<extra></extra>'
+    };
+
+    var pctClass = data.percentile_class || '';
+    var classText = pctClass ? ' (' + pctClass + ')' : '';
+
+    // Calculate x-axis range from data
+    var validValues = pctValues.filter(function(v) { return v !== null && v !== undefined; });
+    var minX = Math.min.apply(null, validValues);
+    var maxX = Math.max.apply(null, validValues);
+    if (currentDepth !== null && currentDepth !== undefined) {
+        minX = Math.min(minX, currentDepth);
+        maxX = Math.max(maxX, currentDepth);
+    }
+    var padding = (maxX - minX) * 0.15 || 5;
+
+    // Build title with current depth info
+    var titleText = 'Depth to Water (ft)';
+    if (currentDepth !== null && currentDepth !== undefined) {
+        titleText += '  |  <span style="color:#E91E63">Current: ' + currentDepth.toFixed(1) + ' ft</span>';
+    }
+
+    // Calculate height based on container width for proper aspect ratio
+    var containerWidth = chartDiv.parentElement.offsetWidth - 10;
+    var chartHeight = Math.max(160, Math.min(200, containerWidth * 0.28));
+
+    var layout = {
+        height: chartHeight,
+        margin: { l: 60, r: 25, t: 10, b: 40 },
+        xaxis: {
+            title: { text: titleText, font: { size: 10 } },
+            tickfont: { size: 9 },
+            gridcolor: '#e0e0e0',
+            range: [0, maxX * 1.15]
+        },
+        yaxis: {
+            tickfont: { size: 9 },
+            automargin: true
+        },
+        bargap: 0.15,
+        plot_bgcolor: 'white',
+        paper_bgcolor: 'white',
+        showlegend: false,
+        // Current depth as vertical line shape
+        shapes: (currentDepth !== null && currentDepth !== undefined) ? [{
+            type: 'line',
+            x0: currentDepth,
+            x1: currentDepth,
+            y0: 0,
+            y1: 1,
+            yref: 'paper',
+            line: { color: '#E91E63', width: 3, dash: 'dash' }
+        }] : []
+    };
+
+    var config = { responsive: true, displayModeBar: false };
+    layout.autosize = false;
+    layout.width = containerWidth;
+
+    Plotly.newPlot(chartDiv, [trace], layout, config).then(function() {
+        // Force exact height
+        chartDiv.style.height = chartHeight + 'px';
+        chartDiv.style.maxHeight = chartHeight + 'px';
+        var plotContainer = chartDiv.querySelector('.plot-container');
+        if (plotContainer) {
+            plotContainer.style.height = chartHeight + 'px';
+        }
+    });
+}
+
+// Draw Time Series Chart
+function drawTimeSeriesChart(dates, values, siteNo, color) {
+    var chartDiv = document.getElementById('chartArea');
+    if (!chartDiv) return;
+
+    color = color || '#1976D2';
+    var rgbMatch = color.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+    var fillColor = rgbMatch ? 'rgba(' + parseInt(rgbMatch[1], 16) + ',' + parseInt(rgbMatch[2], 16) + ',' + parseInt(rgbMatch[3], 16) + ',0.1)' : 'rgba(25,118,210,0.1)';
+
+    var trace = {
+        x: dates,
+        y: values,
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'Depth to Water',
+        line: { color: color, width: 2 },
+        marker: { size: 5, color: color },
+        fill: 'tozeroy',
+        fillcolor: fillColor
+    };
+
+    // Calculate height based on container width for proper aspect ratio
+    var containerWidth = chartDiv.parentElement.offsetWidth - 10;
+    var chartHeight = Math.max(180, Math.min(220, containerWidth * 0.32));
+
+    var layout = {
+        height: chartHeight,
+        margin: { l: 55, r: 15, t: 10, b: 55 },
+        xaxis: { title: 'Date', tickangle: -45, tickfont: { size: 8 }, gridcolor: '#e0e0e0' },
+        yaxis: { title: 'Depth (ft)', titlefont: { size: 10 }, autorange: 'reversed', tickfont: { size: 8 }, gridcolor: '#e0e0e0' },
+        plot_bgcolor: 'white',
+        paper_bgcolor: 'white',
+        hovermode: 'x unified'
+    };
+
+    var config = {
+        responsive: true,
+        displayModeBar: true,
+        modeBarButtonsToRemove: ['pan2d', 'select2d', 'lasso2d', 'autoScale2d'],
+        displaylogo: false
+    };
+
+    layout.autosize = false;
+    layout.width = containerWidth;
+
+    Plotly.newPlot(chartDiv, [trace], layout, config).then(function() {
+        // Force exact height
+        chartDiv.style.height = chartHeight + 'px';
+        chartDiv.style.maxHeight = chartHeight + 'px';
+        var plotContainer = chartDiv.querySelector('.plot-container');
+        if (plotContainer) {
+            plotContainer.style.height = chartHeight + 'px';
+        }
+    });
+}
+
+// Close Marker Popup
+function closeMarkerPopup() {
+    document.getElementById('markerPopup').style.display = 'none';
+    document.getElementById('popupOverlay').style.display = 'none';
+}
+
+// Update Scale Bar
+function updateScaleBar(zoom, lat) {
+    var metersPerPixel = 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, zoom);
+    var scaleValues = [
+        { meters: 5000000, label: '5000 km' },
+        { meters: 2000000, label: '2000 km' },
+        { meters: 1000000, label: '1000 km' },
+        { meters: 500000, label: '500 km' },
+        { meters: 200000, label: '200 km' },
+        { meters: 100000, label: '100 km' },
+        { meters: 50000, label: '50 km' },
+        { meters: 20000, label: '20 km' },
+        { meters: 10000, label: '10 km' },
+        { meters: 5000, label: '5 km' },
+        { meters: 2000, label: '2 km' },
+        { meters: 1000, label: '1 km' },
+        { meters: 500, label: '500 m' },
+        { meters: 200, label: '200 m' },
+        { meters: 100, label: '100 m' }
+    ];
+
+    var bestScale = scaleValues[0];
+    for (var i = 0; i < scaleValues.length; i++) {
+        var pixelWidth = scaleValues[i].meters / metersPerPixel;
+        if (pixelWidth >= 50 && pixelWidth <= 150) {
+            bestScale = scaleValues[i];
+            break;
+        }
+        if (pixelWidth < 50) {
+            bestScale = scaleValues[Math.max(0, i - 1)];
+            break;
+        }
+    }
+
+    var barWidth = bestScale.meters / metersPerPixel;
+    document.getElementById('scaleBarLine').style.width = barWidth + 'px';
+    document.getElementById('scaleBarLabel').textContent = bestScale.label;
+}
+
+// Initialize Map Events
+function initMapEvents() {
+    var gd = getPlotDiv();
+    if (gd) {
+        gd.on('plotly_click', function(data) {
+            var point = data.points[0];
+            if (point && point.customdata) {
+                showMarkerPopup(point.customdata.site_no, point.customdata);
+            }
+        });
+
+        gd.on('plotly_relayout', function(data) {
+            if (data['map.zoom']) {
+                MapState.currentZoom = data['map.zoom'];
+            }
+            var layout = gd.layout;
+            if (layout && layout.map) {
+                var zoom = layout.map.zoom || MapState.homeZoom;
+                var center = layout.map.center || MapState.homeCenter;
+                updateScaleBar(zoom, center.lat);
+            }
+        });
+    }
+
+    // ESC to close popup
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMarkerPopup();
+        }
+    });
+
+    // Initial scale bar
+    setTimeout(function() {
+        updateScaleBar(MapState.homeZoom, MapState.homeCenter.lat);
+    }, 500);
+}
+
+// DOM Ready
+document.addEventListener('DOMContentLoaded', initMapEvents);
+</script>
+<script>
+    // Initialize map with config
+    initMapState({
+        homeLat: 32.99058,
+        homeLon: -116.99953333333333,
+        homeZoom: 9,
+        timeSeries: {"325536N1170608W001": {"dates": ["2023-05-11", "2023-10-10", "2024-05-20", "2024-11-24", "2025-01-01"], "values": [12.37, 13.99, 12.65, 15.41, 15.57]}, "325910N1170835W006": {"dates": ["2023-05-10", "2023-10-10", "2024-05-22", "2024-11-24", "2025-01-01"], "values": [11.92, 13.38, 11.98, 16.33, 16.69]}, "326821N1171124W006": {"dates": ["2023-05-11", "2023-10-10", "2024-05-22"], "values": [9.3, 8.73, 8.11]}, "327781N1171209W006": {"dates": ["2023-05-10", "2023-10-10", "2024-05-22", "2024-11-24", "2025-01-01"], "values": [17.33, 18.01, 17.39, 18.16, 18.44]}, "327893N1169478W001": {"dates": ["2023-05-11", "2023-10-10", "2024-05-20", "2024-08-27", "2024-09-30", "2024-10-29"], "values": [6.91, 8.7, 9.53, 10.96, 11.25, 11.45]}, "328442N1169971W001": {"dates": ["2023-05-23", "2023-11-20", "2024-06-03", "2024-11-30"], "values": [30.88, 30.78, 12.08, 11.78]}, "328556N1169394W001": {"dates": ["2023-05-11", "2023-10-10", "2024-05-22", "2024-08-27", "2024-09-30", "2024-10-29"], "values": [17.49, 18.49, 17.27, 13.22, 18.59, 18.74]}, "328662N1169215W001": {"dates": ["2023-05-01", "2023-10-01", "2024-05-22", "2024-12-08"], "values": [33.0, 26.0, 19.0, 25.0]}, "329593N1169256W001": {"dates": ["2023-05-11", "2023-10-10", "2024-05-22", "2024-07-29", "2024-08-27", "2024-09-30", "2024-10-29"], "values": [15.39, 12.62, 11.51, 11.56, 16.95, 11.98, 12.39]}, "328715N1169003W001": {"dates": ["2023-05-06", "2023-11-04", "2024-05-22", "2024-11-01"], "values": [25.29, 11.79, 11.52, 13.93]}, "329054N1169302W001": {"dates": ["2023-05-11", "2023-11-08", "2024-05-22", "2024-08-27", "2024-09-30", "2024-10-29"], "values": [19.0, 19.84, 15.53, 16.16, 16.67, 17.13]}, "330494N1170425W001": {"dates": ["2023-02-09", "2023-10-10", "2024-05-14", "2024-11-19"], "values": [14.42, 8.96, 8.68, 9.01]}, "330557N1170464W001": {"dates": ["2023-02-09", "2023-10-10", "2024-05-22", "2024-11-01"], "values": [4.26, 7.16, 3.3, 8.09]}, "330596N1170367W002": {"dates": ["2023-02-09", "2023-10-10", "2024-11-01"], "values": [2.74, 26.45, 8.46]}, "330699N1170319W002": {"dates": ["2023-02-09", "2023-10-10", "2024-11-01"], "values": [6.46, 27.11, 26.51]}, "330786N1169983W002": {"dates": ["2023-02-09", "2023-10-10", "2024-03-01", "2024-11-01"], "values": [55.93, 20.59, 18.04, 19.14]}, "330848N1170146W001": {"dates": ["2023-02-09", "2023-11-08", "2024-05-22", "2024-11-01"], "values": [9.9, 13.15, 9.32, 13.53]}, "330870N1169636W002": {"dates": ["2024-11-01"], "values": [30.15]}, "330874N1169748W001": {"dates": ["2023-02-09", "2023-10-10", "2024-05-01", "2024-05-20", "2024-08-29", "2024-11-01"], "values": [71.57, 49.36, 21.02, 23.46, 29.04, 30.6]}, "330878N1169312W002": {"dates": ["2023-02-09", "2023-10-10", "2024-11-01"], "values": [44.88, 37.29, 42.67]}, "330891N1169551W002": {"dates": ["2023-10-10", "2024-03-01", "2024-07-01"], "values": [42.89, 39.8, 24.92]}, "330921N1169508W002": {"dates": ["2023-02-09", "2023-10-10", "2024-04-22", "2024-05-22", "2024-11-19"], "values": [100.08, 45.4, 24.78, 26.6, 39.23]}, "330924N1169465W001": {"dates": ["2023-02-09", "2023-10-10", "2024-08-29", "2024-11-01"], "values": [97.52, 41.15, 32.38, 35.36]}, "330949N1169598W002": {"dates": ["2023-03-13", "2023-09-27", "2024-03-07", "2024-09-27"], "values": [82.85, 47.95, 36.35, 27.18]}, "330979N1170172W001": {"dates": ["2023-02-09", "2023-10-19", "2024-05-01", "2024-11-01"], "values": [7.69, 7.02, -0.89, 2.4]}, "332114N1173775W001": {"dates": ["2023-03-13", "2023-11-20", "2024-03-05", "2024-11-06"], "values": [11.37, 11.5, 14.0, 13.05]}, "332367N1167165W001": {"dates": ["2023-01-17", "2023-02-15", "2023-03-15", "2023-04-17", "2023-05-16", "2023-06-15", "2023-07-17", "2023-08-16", "2023-09-15", "2023-10-13", "2023-11-16", "2023-12-15", "2024-01-16", "2024-02-15", "2024-03-14", "2024-04-15", "2024-05-15", "2024-06-18", "2024-07-15", "2024-08-15", "2024-09-16", "2024-10-15", "2024-11-14", "2024-12-12"], "values": [37.05, 35.84, 34.58, 31.2, 30.26, 29.98, 30.0, 30.0, 29.74, 30.08, 30.0, 30.18, 29.87, 29.43, 28.87, 28.62, 28.35, 28.52, 28.72, 29.0, 28.97, 29.33, 29.42, 29.11]}, "332391N1173818W001": {"dates": ["2023-01-09", "2023-02-06", "2023-03-07", "2023-04-04", "2023-05-01", "2023-07-07", "2023-08-01", "2023-09-05", "2023-10-02", "2023-11-13", "2024-01-05", "2024-05-02", "2024-11-04"], "values": [10.13, 9.09, 8.75, 8.96, 10.1, 10.21, 10.13, 9.96, 10.06, 10.05, 9.72, 9.51, 10.97]}, "332486N1166558W001": {"dates": ["2023-01-17", "2023-02-15", "2023-03-15", "2023-04-17", "2023-05-16", "2023-06-15", "2023-07-17", "2023-08-16", "2024-02-15", "2024-03-14", "2024-04-15", "2024-05-15", "2024-06-18", "2024-07-15", "2024-09-16"], "values": [22.7, 8.96, 8.15, 9.75, 9.0, 6.27, 2.55, 1.62, -0.62, 1.11, -0.39, -0.68, 8.23, -2.0, 8.35]}},
+        layers: []
+    });
+</script>
+</body>
+</html>
