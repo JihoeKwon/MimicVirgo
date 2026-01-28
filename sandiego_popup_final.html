@@ -152,6 +152,8 @@ html, body {
     padding: 15px 20px;
     font-size: 16px;
     font-weight: 600;
+    cursor: move;
+    user-select: none;
 }
 
 .marker-popup .popup-body {
@@ -731,13 +733,15 @@ function initPopupResize(popup) {
     }
 }
 
-// Setup resize events
+// Setup resize and drag events
 function setupResizeEvents(popup) {
     var isResizing = false;
+    var isDragging = false;
     var currentHandle = null;
-    var startX, startY, startWidth, startHeight;
+    var startX, startY, startWidth, startHeight, startLeft, startTop;
 
     popup.addEventListener('mousedown', function(e) {
+        // Resize handle
         if (e.target.classList.contains('resize-handle')) {
             isResizing = true;
             currentHandle = e.target.getAttribute('data-resize');
@@ -747,9 +751,33 @@ function setupResizeEvents(popup) {
             startHeight = popup.offsetHeight;
             e.preventDefault();
         }
+        // Drag by header
+        else if (e.target.classList.contains('popup-header') || e.target.closest('.popup-header')) {
+            if (!e.target.classList.contains('close-popup')) {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startLeft = popup.offsetLeft;
+                startTop = popup.offsetTop;
+                popup.style.transform = 'none';
+                e.preventDefault();
+            }
+        }
     });
 
     document.addEventListener('mousemove', function(e) {
+        // Handle dragging
+        if (isDragging) {
+            var dx = e.clientX - startX;
+            var dy = e.clientY - startY;
+            var newLeft = Math.max(0, Math.min(window.innerWidth - 100, startLeft + dx));
+            var newTop = Math.max(0, Math.min(window.innerHeight - 50, startTop + dy));
+            popup.style.left = newLeft + 'px';
+            popup.style.top = newTop + 'px';
+            return;
+        }
+
+        // Handle resizing
         if (!isResizing) return;
 
         var dx = e.clientX - startX;
@@ -776,6 +804,9 @@ function setupResizeEvents(popup) {
     });
 
     document.addEventListener('mouseup', function() {
+        if (isDragging) {
+            isDragging = false;
+        }
         if (isResizing) {
             isResizing = false;
             currentHandle = null;
