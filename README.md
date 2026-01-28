@@ -45,6 +45,41 @@ MimicVirgo/
 | CADWR | California Department of Water Resources | [CADWR Open Data](https://data.cnra.ca.gov/) |
 | USGS | U.S. Geological Survey | [USGS Water Services](https://waterservices.usgs.gov/) |
 
+### CADWR 수집 데이터 필드
+
+| 필드명 | 설명 | 단위 |
+|--------|------|------|
+| `site_no` | 관측정 고유 코드 | - |
+| `name` | 관측정 이름 | - |
+| `lat` / `lon` | 위도 / 경도 | degree |
+| `county` | 카운티 (행정구역) | - |
+| `basin_name` | 지하수 유역명 | - |
+| `measurement_date` | 최근 측정 일자 | YYYY-MM-DD |
+| `depth_ft` | 지하수 심도 (Depth to Water) | ft |
+| `gwe_ft` | 지하수위 표고 (GW Elevation) | ft |
+| `gse_ft` | 지표면 표고 (Ground Surface Elevation) | ft |
+| `well_use` | 우물 용도 (Observation, Irrigation 등) | - |
+| `change` | 수위 변화량 | ft |
+| `pct_lowest` ~ `pct_highest` | 과거 백분위수 (P10, P25, P50, P75, P90) | ft |
+| `percentile_class` | 백분위 등급 (0-10, 10-25, ..., 90-100) | - |
+| `measurement_count` | 누적 측정 횟수 | 회 |
+
+## 지도 레이어 (Base Map)
+
+| 레이어 | 출처 | 설명 |
+|--------|------|------|
+| **CARTO Positron** | [CARTO](https://carto.com/) / [OpenStreetMap](https://www.openstreetmap.org/) | 밝은 톤의 기본 지도 타일 |
+| **NASA ASTER GDEM Shaded Relief** | [NASA GIBS](https://gibs.earthdata.nasa.gov/) | 지형 음영 기복도 (30m 해상도) |
+
+### 타일 URL
+```
+# CARTO Positron
+https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png
+
+# NASA ASTER GDEM Shaded Relief
+https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/ASTER_GDEM_Greyscale_Shaded_Relief/default/GoogleMapsCompatible_Level12/{z}/{y}/{x}.png
+```
+
 ## 기술 스택
 
 - **Backend**: Python 3.x
