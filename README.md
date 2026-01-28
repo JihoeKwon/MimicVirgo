@@ -6,6 +6,10 @@ NASA JPL [Virgo](https://wwao.jpl.nasa.gov/media/virgo) 플랫폼을 벤치마�
 
 이 프로젝트는 California Department of Water Resources (CADWR) API로부터 지하수 데이터를 수집하여 인터랙티브 지도 상에 가시화합니다. Virgo 플랫폼의 핵심 기능을 분석하고 재현하여, 향후 **대한민국 지하수 정보 플랫폼 AEGIS** 구현의 기반 기술로 활용될 예정입니다.
 
+## 데모
+
+![MimicVirgo Demo](docs/demo.gif)
+
 ## 주요 기능
 
 - **실시간 지하수 데이터 수집**: CADWR API를 통한 캘리포니아 지하수 관측정 데이터 수집
